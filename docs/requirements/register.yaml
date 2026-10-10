@@ -1,0 +1,8 @@
+# Every requirement, one entry each. The versioned HTML documents explain them;
+# this file is the list. Status: built | partial | new | dropped.
+requirements: []
+#  - id: WF-1
+#    title: Triggers for workflows
+#    priority: P0
+#    status: new
+#    since: v1
