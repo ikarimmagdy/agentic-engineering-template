@@ -24,6 +24,7 @@ recorded here in the same turn.
 | `outputs/` | Guides and API references produced from the work. |
 | `code/` | One folder per service or repo. |
 | `.claude/` | Agents, commands, hooks, path-scoped rules and skills for this project. |
+| `examples/` | Worked example of the whole loop (data add-on), one file per step. Reference only; delete when the team no longer needs it. |
 
 ## Commands
 - `{{dev command}}` — start locally
