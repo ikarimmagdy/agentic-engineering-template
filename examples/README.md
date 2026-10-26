@@ -1,5 +1,10 @@
 # Examples — the agentic engineering loop, worked end to end
 
+> This example predates `specs/` (template v2). Its steps still hold; in v2 the
+> feature-level work lands in `specs/<KEY>-<slug>/` through `/intent`, `/spec`,
+> `/design`, `/tasks`, `/build`, `/test`, `/deploy` instead of `docs/requirements/`
+> and `planning/BACKLOG.md`, which stay for product-wide requirements.
+
 One fictional feature, **buy a data add-on** in a telecom self-care app, taken through every step of the loop this template supports. Each file shows what the engineer types, what Claude (or the named agent) does, the file it produces, and what to check before moving on. Copy the produced files into your own project's paths; the names and IDs are examples.
 
 The example system is generic on purpose: a mobile app (Swift / Kotlin), an API gateway (Ruby), a core service (.NET), a notification service (Java), a billing system (BSS) and a payment gateway. No real company, product or data appears here.

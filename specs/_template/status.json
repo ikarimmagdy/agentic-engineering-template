@@ -1,0 +1,20 @@
+{
+  "key": "{{KEY}}",
+  "title": "{{TITLE}}",
+  "phase": "intent",
+  "approved": {
+    "intent": null,
+    "spec": null,
+    "design": null
+  },
+  "tracker": {
+    "initiative": null,
+    "epics": [],
+    "stories": []
+  },
+  "sources": [],
+  "repos": [],
+  "created": "{{DATE}}",
+  "updated": "{{DATE}}",
+  "history": []
+}

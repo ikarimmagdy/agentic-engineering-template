@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SessionStart: orient the session — handoff state, latest requirements, last ADRs."""
+"""SessionStart: orient the session — specs in flight, handoff state, latest requirements, last ADRs."""
 from __future__ import annotations
 import glob
 import json
@@ -37,9 +37,26 @@ def handoff_next() -> list[str]:
     return lines[:8]
 
 
+def specs_in_flight() -> list[str]:
+    out = []
+    for p in sorted(glob.glob(os.path.join(project, "specs", "*", "status.json"))):
+        if os.path.basename(os.path.dirname(p)).startswith("_"):
+            continue
+        try:
+            st = json.load(open(p, encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if st.get("phase") != "done":
+            out.append(f"{st.get('key')} {st.get('title')} — phase {st.get('phase')}")
+    return out
+
+
 def main() -> None:
     json.load(sys.stdin)
     parts = []
+    flight = specs_in_flight()
+    if flight:
+        parts.append("Specs in flight (/feature <KEY> for the next step):\n" + "\n".join(flight))
     req = latest_version("docs/requirements")
     if req:
         parts.append(f"Latest requirements: {req}")

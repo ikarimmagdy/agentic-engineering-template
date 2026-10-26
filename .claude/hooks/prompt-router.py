@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """UserPromptSubmit: route a prompt to the project's process when it matches.
 
-- New or changed requirements  -> the /req flow (new requirements version).
-- A decision being made        -> the /adr flow (new decision record).
+- A PRD, epic or new piece of work   -> /intent (then the loop in specs/).
+- New or changed requirements        -> /spec for a feature, /req for product-wide ones.
+- A decision being made              -> /adr.
+- Build / test / deploy / a defect   -> /build, /test, /deploy, /fix-issue.
 
 Matching is keyword-based on purpose: a hook cannot understand intent, so it
 only reminds Claude which process applies. Claude still does the work.
@@ -11,37 +13,33 @@ import json
 import re
 import sys
 
-REQUIREMENT = re.compile(
-    r"\b(requirements?|new feature|add (a )?feature|we need to (add|support|build)|"
-    r"i need (to add|you to add)|scope change|user stor(y|ies)|acceptance criteria)\b"
-    r"|متطلب|متطلبات|ميزة جديدة",
-    re.IGNORECASE,
-)
-DECISION = re.compile(
-    r"\b(we decided|i decided|decision is|let'?s (go with|use)|we will use|"
-    r"instead of|switch(ing)? to|replace .+ with|trade-?off)\b",
-    re.IGNORECASE,
-)
-
-REQ_NOTE = (
-    "Requirements change detected. Follow .claude/commands/req.md: copy the latest "
-    "docs/requirements/v<N>-<date> to the next version, apply the change there, "
-    "update docs/requirements/register.yaml and index.html, note it in CLAUDE.md's "
-    "change log, then commit. Never edit a published version."
-)
-ADR_NOTE = (
-    "A decision may be in this message. If it settles a choice with alternatives, "
-    "draft an ADR with .claude/commands/adr.md (status Proposed) and ask the project owner to accept it."
-)
+ROUTES = [
+    (re.compile(r"\b(prd|epic|initiative|new feature|add (a )?feature|we need to (add|support|build))\b"
+                r"|متطلب|ميزة جديدة", re.I),
+     "New work detected. Start it in the loop: /intent <KEY> <slug> <source> creates specs/<KEY>-<slug>/ "
+     "and its intent. Existing code involved: /gap <KEY>."),
+    (re.compile(r"\b(requirements?|user stor(y|ies)|acceptance criteria|scope change)\b|متطلبات", re.I),
+     "Requirements change detected. For a feature: /spec <KEY> (a change to an approved spec needs a "
+     "Change log row and re-approval). For product-wide requirements: /req."),
+    (re.compile(r"\b(we decided|i decided|decision is|let'?s (go with|use)|we will use|instead of|"
+                r"switch(ing)? to|replace .+ with|trade-?off)\b", re.I),
+     "A decision may be in this message. If it settles a choice with alternatives, draft an ADR with "
+     "/adr (status Proposed) and ask the project owner to accept it."),
+    (re.compile(r"\b(implement|build (it|the|this)|start coding|write the code)\b", re.I),
+     "Building: run /feature <KEY> first. Code needs a spec in the build phase (the spec-gate hook "
+     "enforces it); then /build <KEY> <task-id>."),
+    (re.compile(r"\b(run (the )?tests?|e2e|end to end|simulator|emulator|regression)\b", re.I),
+     "Testing: /test <KEY> [layer] runs the layers in order and records the run in the spec."),
+    (re.compile(r"\b(deploy|release|promote|roll ?out)\b", re.I),
+     "Deploying: /deploy <KEY> <environment>. Confirm the environment with the owner first."),
+    (re.compile(r"\b(bug|defect|incident|broken|regression in|500 error|crash(es|ing)?)\b", re.I),
+     "Defect: /fix-issue starts with a failing test that reproduces it."),
+]
 
 
 def main() -> None:
     prompt = (json.load(sys.stdin).get("prompt") or "")
-    notes = []
-    if REQUIREMENT.search(prompt):
-        notes.append(REQ_NOTE)
-    if DECISION.search(prompt):
-        notes.append(ADR_NOTE)
+    notes = [note for pattern, note in ROUTES if pattern.search(prompt)]
     if notes:
         print(json.dumps({
             "hookSpecificOutput": {
