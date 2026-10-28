@@ -33,9 +33,23 @@ Intent → Spec → Design → Build → Test → Deploy → Maintain ─┐
 | `contracts/` | OpenAPI and event schemas this work adds or changes | `/design` |
 | `tasks.md` | Ordered tasks; one task = one branch = one pull request. **The Status column is the only place task status lives** | `/tasks`, `tools/spec.py task` |
 | `test-plan.md` | Every acceptance criterion mapped to a test at a named layer | `/test` |
-| `status.json` | Phase, approvals, tracker links, repos. Read by hooks, `tools/spec.py` and dashboards | `tools/spec.py` only |
+| `status.json` | Phase, approvals, intake, tracker links, repos. Read by hooks, `tools/spec.py` and dashboards | `tools/spec.py` only |
 | `inputs/` | PRDs, design exports, tracker snapshots, meeting notes. Received material, never edited | anyone |
 | `outputs/` | Gap analyses, review reports, test runs, release notes, runbooks | commands and agents |
+| `outputs/review/<area>.md` | Code review of the existing code per area: `scope`, `architecture`, `infra`, `apis`, `data`, `localization`, `ui-ux`, `security`, `tests` | `/gap <KEY> <area>` |
+| `outputs/findings.json` | Every finding as data: `id`, `title`, `layer`, `category`, `dimension`, `area`, `severity`, `scope`, `kind` (gap / defect), `location`, `detail`, `impact`, `fix`, `status`, `source`. Ids never renumbered | `/gap`, `/pr-review`, `/feedback` |
+| `outputs/feedback/v<N>-<date>.md` | One customer or QA feedback batch: verdict and root cause per issue, linked to finding ids | `/feedback` |
+
+## Intake
+
+Every spec records where it came from in `status.json` → `intake` (`python3 tools/spec.py intake <KEY> <kind> --ref <ref>`):
+
+| Kind | Ref | Read with |
+|---|---|---|
+| `idea` | none | the text as given |
+| `jira` | initiative, epic or story key | issue-tracker MCP (Jira), PRD through the documentation MCP (Confluence) |
+| `github-issue` | `owner/repo#n` | `gh issue view` |
+| `pr` | PR URL | `gh pr view`, then `/pr-review` |
 
 ## Rules
 

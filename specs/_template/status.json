@@ -2,6 +2,7 @@
   "key": "{{KEY}}",
   "title": "{{TITLE}}",
   "phase": "intent",
+  "intake": null,
   "approved": {
     "intent": null,
     "spec": null,

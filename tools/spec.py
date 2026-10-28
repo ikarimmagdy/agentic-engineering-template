@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Specs in flight: create, move through the loop, check, export.
 
-  python3 tools/spec.py new <KEY> <slug> [--title "..."]
+  python3 tools/spec.py new <KEY> <slug> [--title "..."] [--intake KIND --ref R]
+  python3 tools/spec.py intake <KEY> idea|jira|github-issue|pr [--ref R] [--summary S]
   python3 tools/spec.py list
   python3 tools/spec.py show <KEY>
   python3 tools/spec.py approve <KEY> intent|spec|design [--by NAME]
@@ -10,6 +11,9 @@
   python3 tools/spec.py link <KEY> [--initiative K] [--epic K]... [--story K]... [--source URL]... [--repo R]...
   python3 tools/spec.py check [KEY]
   python3 tools/spec.py json
+
+Outputs the json export also reads: outputs/review/<area>.md, outputs/findings.json,
+outputs/feedback/v<N>-<date>.md (see specs/README.md).
 
 Python 3.9+, standard library only. status.json is written only by this tool.
 """
@@ -30,6 +34,10 @@ TASK_STATES = ["todo", "doing", "review", "done", "blocked"]
 LAYERS = ["unit", "component", "functional", "api", "mobile", "e2e"]
 TEST_STATES = ["planned", "written", "passing", "failing"]
 APPROVAL_FILE = {"intent": "intent.md", "spec": "spec.md", "design": "plan.md"}
+INTAKE_KINDS = ["idea", "jira", "github-issue", "pr"]
+REVIEW_AREAS = ["scope", "architecture", "infra", "apis", "data", "localization", "ui-ux", "security", "tests"]
+SEVERITIES = ["critical", "high", "medium", "low"]
+LOOP_FILES = ["intent.md", "spec.md", "plan.md", "tasks.md", "test-plan.md"]
 
 NEXT = {
     "intent": "/intent to finish intent.md, then the owner approves it",
@@ -115,6 +123,13 @@ def tests(d: str) -> list[dict]:
             for m in TEST_ROW.finditer(read(d, "test-plan.md"))]
 
 
+def next_step(st: dict, tk: list[dict]) -> str:
+    if st["phase"] == "build" and tk:
+        open_tasks = [t["id"] for t in tk if t["status"] != "done"]
+        return f"/build {st['key']} {open_tasks[0]}" if open_tasks else f"/test {st['key']}"
+    return NEXT.get(st["phase"], "")
+
+
 def summary(d: str) -> dict:
     st = load(d)
     tk = tasks(d)
@@ -125,13 +140,47 @@ def summary(d: str) -> dict:
     return {
         "key": st["key"], "title": st["title"], "folder": os.path.basename(d), "phase": st["phase"],
         "approved": st["approved"], "tracker": st.get("tracker", {}), "repos": st.get("repos", []),
-        "updated": st.get("updated"), "next": NEXT.get(st["phase"], ""),
+        "updated": st.get("updated"), "next": next_step(st, tk),
         "requirements": len(requirements(d)), "criteria": len(acs),
         "criteria_tested": len([a for a in acs if a in covered]),
         "criteria_passing": len([a for a in acs if a in passing]),
         "tasks": {s: len([t for t in tk if t["status"] == s]) for s in TASK_STATES},
         "task_list": tk, "history": st.get("history", []),
+        "dir": os.path.basename(d), "intake": st.get("intake"),
+        "findings": findings_summary(d),
+        "review": [a for a in REVIEW_AREAS if os.path.exists(os.path.join(d, "outputs", "review", a + ".md"))],
+        "feedback": sorted(os.path.basename(p) for p in glob.glob(os.path.join(d, "outputs", "feedback", "v*.md"))),
+        "files": [f for f in LOOP_FILES if written(d, f, st["key"], st["title"])],
     }
+
+
+def template_text(name: str) -> str:
+    return read(os.path.join(root(), "specs", "_template"), name)
+
+
+def written(d: str, name: str, key: str, title: str) -> bool:
+    """True when the file differs from the template (placeholders filled in)."""
+    s = read(d, name)
+    if not s.strip():
+        return False
+    t = template_text(name).replace("{{KEY}}", key).replace("{{TITLE}}", title)
+    norm = lambda x: re.sub(r"\d{4}-\d{2}-\d{2}|\{\{DATE\}\}|\s+", "", x)
+    return norm(s) != norm(t)
+
+
+def findings_summary(d: str) -> dict | None:
+    p = os.path.join(d, "outputs", "findings.json")
+    if not os.path.exists(p):
+        return None
+    rows = json.load(open(p, encoding="utf-8")).get("findings", [])
+    def count(field):
+        out = {}
+        for r in rows:
+            k = r.get(field) or "none"
+            out[k] = out.get(k, 0) + 1
+        return out
+    return {"total": len(rows), "bySeverity": count("severity"), "byDimension": count("dimension"),
+            "byArea": count("area"), "open": len([r for r in rows if r.get("status", "open") == "open"])}
 
 
 def problems(d: str, target: str | None = None) -> list[str]:
@@ -198,6 +247,9 @@ def cmd_new(a) -> None:
             open(p, "w", encoding="utf-8").write(s)
     st = load(dest)
     st["history"].append({"date": today(), "event": "created"})
+    if a.intake:
+        st["intake"] = {"kind": a.intake, "ref": a.ref, "summary": a.summary}
+        st["history"].append({"date": today(), "event": f"intake {a.intake}" + (f" {a.ref}" if a.ref else "")})
     save(dest, st)
     print(os.path.relpath(dest, base))
 
@@ -252,7 +304,7 @@ def cmd_phase(a) -> None:
     st["phase"] = a.phase
     st["history"].append(event)
     save(d, st)
-    print(f"{a.key}: {a.phase}. Next: {NEXT[a.phase]}")
+    print(f"{a.key}: {a.phase}. Next: {next_step(st, tasks(d))}")
 
 
 def cmd_task(a) -> None:
@@ -295,6 +347,15 @@ def cmd_link(a) -> None:
     print(json.dumps({"tracker": tr, "sources": st["sources"], "repos": st["repos"]}, indent=2))
 
 
+def cmd_intake(a) -> None:
+    d = find(root(), a.key)
+    st = load(d)
+    st["intake"] = {"kind": a.kind, "ref": a.ref, "summary": a.summary}
+    st.setdefault("history", []).append({"date": today(), "event": f"intake {a.kind}" + (f" {a.ref}" if a.ref else "")})
+    save(d, st)
+    print(json.dumps(st["intake"], indent=2, ensure_ascii=False))
+
+
 def cmd_check(a) -> None:
     base = root()
     dirs = [find(base, a.key)] if a.key else spec_dirs(base)
@@ -318,6 +379,7 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
     n = sub.add_parser("new"); n.add_argument("key"); n.add_argument("slug"); n.add_argument("--title")
+    n.add_argument("--intake", choices=INTAKE_KINDS); n.add_argument("--ref"); n.add_argument("--summary")
     n.set_defaults(fn=cmd_new)
     sub.add_parser("list").set_defaults(fn=cmd_list)
     s = sub.add_parser("show"); s.add_argument("key"); s.set_defaults(fn=cmd_show)
@@ -331,6 +393,8 @@ def main() -> None:
     for flag in ("--epic", "--story", "--source", "--repo"):
         lk.add_argument(flag, action="append")
     lk.set_defaults(fn=cmd_link)
+    ik = sub.add_parser("intake"); ik.add_argument("key"); ik.add_argument("kind", choices=INTAKE_KINDS)
+    ik.add_argument("--ref"); ik.add_argument("--summary"); ik.set_defaults(fn=cmd_intake)
     c = sub.add_parser("check"); c.add_argument("key", nargs="?"); c.set_defaults(fn=cmd_check)
     sub.add_parser("json").set_defaults(fn=cmd_json)
     a = p.parse_args()
