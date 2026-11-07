@@ -36,6 +36,34 @@ Intent → Spec → Design → Build → Test → Deploy → Maintain ─┐
 | `status.json` | Phase, approvals, tracker links, repos. Read by hooks, `tools/spec.py` and dashboards | `tools/spec.py` only |
 | `inputs/` | PRDs, design exports, tracker snapshots, meeting notes. Received material, never edited | anyone |
 | `outputs/` | Gap analyses, review reports, test runs, release notes, runbooks | commands and agents |
+| `outputs/impact.json` | What this work changes in the system, as data: components, flows (communication matrix), infrastructure, screens, use cases, decisions, each with `change` and `where`. Merged across specs into the system model by `tools/impact.py` | `/design` writes it, `/build` and `/deploy` keep it true |
+
+## System impact (`outputs/impact.json`)
+
+Every piece of work records what it changes, so the system picture grows with each story
+(`python3 tools/impact.py json` merges all of them over `docs/architecture/baseline.json`; the
+Engineering Hub shows it per work item and as the system map in Knowledge).
+
+```json
+{
+  "version": 1, "key": "TELCO-2586", "updated": "2026-11-06",
+  "summary": "One paragraph: what this work changes in the system.",
+  "components": [{ "id": "Selfcare", "change": "changed", "summary": "...", "where": [{ "repo": "Selfcare", "path": "src/...", "ref": "TELCO-2586/T2-..." }] }],
+  "flows": [{ "from": "vm-selfcare-ios", "to": "vm-selfcare-proxy", "protocol": "HTTPS/REST", "interface": "POST /api/v1/mnp/otp", "change": "added", "summary": "...", "reqs": ["R1"] }],
+  "infra": [{ "id": "Selfcare.MNPDetails.OtpChannel", "kind": "column", "name": "MNPDetails.OtpChannel", "component": "Selfcare", "env": ["dev", "uat", "prd"], "change": "added", "summary": "..." }],
+  "screens": [{ "id": "mnp-otp-channel", "name": "Choose OTP channel", "app": "vm-selfcare-ios", "platforms": ["ios", "android"], "change": "added", "summary": "...", "image": "outputs/review/ui-ux/x.jpg", "reqs": ["R2"] }],
+  "useCases": [{ "id": "UC-1", "name": "Port in with an OTP over WhatsApp", "actor": "Customer", "change": "added", "summary": "...", "reqs": ["R1"], "components": ["vm-selfcare-ios", "Selfcare"] }],
+  "decisions": ["0023"]
+}
+```
+
+- `change`: `added`, `changed`, `removed`, or `used` (touched on the path, not modified).
+- Component ids: the repo `name` from `repos.yaml`, or an id from `docs/architecture/baseline.json`
+  (external systems, data stores). A component in neither carries `name`, `layer` and `kind` on its entry.
+- `where`: repo, path (file or folder), and the branch or tag (`ref`) where the change is.
+- `infra.kind`: `database`, `table`, `column`, `stored-procedure`, `config`, `secret`, `queue`,
+  `topic`, `cache`, `job`, `k8s`, `ingress`, `certificate`, `dns`, `feature-flag`, `other`.
+- `python3 tools/impact.py check [KEY]` validates it; `spec.py check` requires it from the build phase on.
 
 ## Rules
 

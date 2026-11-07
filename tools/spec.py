@@ -155,6 +155,9 @@ def problems(d: str, target: str | None = None) -> list[str]:
             errs.append("spec.md has no requirements")
     if at >= PHASES.index("build") and not tasks(d):
         errs.append("tasks.md has no tasks")
+    if at >= PHASES.index("build"):
+        from impact import check_spec
+        errs += check_spec(d, root())
     ts = tests(d)
     for t in ts:
         if t["layer"] not in LAYERS:

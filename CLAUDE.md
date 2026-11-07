@@ -26,6 +26,7 @@ recorded here in the same turn.
 | `code/` | One folder per service or repo. |
 | `local-env/` | Run everything locally: dependencies, mocks, services, local Kubernetes, `.env.example`. |
 | `tests/` | Cross-service tests: `api/`, `mobile/`, `e2e/`. Unit, component and functional tests stay in each repo. |
+| `specs/<KEY>-*/outputs/impact.json`, `docs/architecture/baseline.json` | What each piece of work changes in the system; `tools/impact.py json` merges them into the system model (Engineering Hub: Impact tab and System map). |
 | `tools/spec.py` | Creates specs, moves phases with gates, updates tasks, checks, exports JSON. |
 | `.claude/` | Agents, commands, hooks, path-scoped rules and skills for this project. |
 | `examples/` | Worked example of the loop (data add-on), one file per step. Reference only. |
@@ -36,6 +37,7 @@ recorded here in the same turn.
 - `{{lint command}}` — lint
 - Tests by layer: unit `{{…}}` · component `{{…}}` · functional `{{…}}` · api `{{…}}` · mobile `{{…}}` · e2e `{{…}}`
 - `python3 tools/spec.py list | show <KEY> | check` — where every spec is
+- `python3 tools/impact.py check [KEY] | json | show <component>` — what each spec changes in the system
 
 ## How work flows here
 ```
