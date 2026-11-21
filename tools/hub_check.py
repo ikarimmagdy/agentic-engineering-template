@@ -7,7 +7,7 @@ For each work item in specs/ (or the keys given):
   diagrams   every phase the item has reached has outputs/diagrams/<phase>/v<N>-<date>.md (specs/README.md, "Diagrams")
   kinds      each diagram is a "## <Kind>: ..." section with one ```mermaid block; the kind places it in the hub
   index      every versioned folder (v<N>-<date>.* files) has a README.md or index.html listing its versions
-  paths      no laptop path (/Users/..., C:\\Users, file:///) in the item's documents or outputs
+  paths      no laptop path (files git ignores never leave the laptop and are skipped) (/Users/..., C:\\Users, file:///) in the item's documents or outputs
   sections   a long document has sections: Markdown over 70 lines with at least three "## " headings, HTML over
              40 KB with at least three <h2>; otherwise the hub shows it as one long page
   design     from design on, plan.md records "Architecture choices" (the architect's decision table)
@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -26,10 +27,21 @@ ROOT = Path(__file__).resolve().parents[1]
 PHASES = ["intent", "spec", "design", "build", "test", "deploy", "maintain"]
 # the phase a diagram folder belongs to, and from which phase on it is expected (diagrams are written at the end of a phase)
 DIAGRAM_DUE = {"intent": "spec", "spec": "design", "design": "build", "build": "test", "test": "deploy", "deploy": "maintain", "maintain": None}
-KINDS = re.compile(r"^(containers?|context|components?|sequence|data model|deployment|pattern|states?|journey|requirement map|"
+KINDS = re.compile(r"^(the idea|containers?|context|components?|sequence|data model|deployment|pattern|states?|journey|requirement map|"
                    r"task|what changes|coverage|test path|deploy order|promotion|rollback|runbook|incident|idea)", re.I)
 LOCAL = re.compile(r"(?<![\w.])(/Users/[A-Za-z]|[A-Z]:\\\\Users\\\\|file:///)")  # a laptop path; /home/app in a container is fine
 VFILE = re.compile(r"^v\d+-\d{4}-\d{2}-\d{2}")
+
+
+# documents the hub shows in their own tabs (tables), raw run output, and anything git ignores (never shared)
+OWN_TAB = {"tasks.md", "test-plan.md", "spec.md"}
+
+
+def ignored(paths: list[Path]) -> set[Path]:
+    if not paths:
+        return set()
+    r = subprocess.run(["git", "check-ignore", "--stdin"], cwd=ROOT, input="\n".join(str(p) for p in paths), capture_output=True, text=True)
+    return {Path(x) for x in r.stdout.split()}
 
 
 def check(d: Path) -> list[dict]:
@@ -58,17 +70,21 @@ def check(d: Path) -> list[dict]:
             if not KINDS.match(title):
                 add("warn", "kinds", rel(f), f"'{title}' does not start with a kind (Sequence:, Pattern:, States:, ...): the hub lists it under More diagrams")
 
-    for folder in sorted({p.parent for p in d.rglob("*") if p.is_file() and VFILE.match(p.name)}):
+    vfiles = [p for p in d.rglob("*") if p.is_file() and VFILE.match(p.name)]
+    for folder in sorted({p.parent for p in vfiles if p not in ignored(vfiles)}):
         if not (folder / "README.md").exists() and not (folder / "index.html").exists():
             add("warn", "index", rel(folder) + "/", "versioned folder without README.md or index.html listing its versions")
 
-    for f in sorted(p for p in d.rglob("*") if p.is_file() and p.suffix.lower() in (".md", ".html", ".htm", ".json", ".yaml", ".yml") and "inputs" not in p.relative_to(d).parts):
+    files = [p for p in d.rglob("*") if p.is_file() and p.suffix.lower() in (".md", ".html", ".htm", ".json", ".yaml", ".yml")
+             and "inputs" not in p.relative_to(d).parts and "test-runs" not in p.relative_to(d).parts]
+    skip = ignored(files)
+    for f in sorted(p for p in files if p not in skip):
         text = f.read_text(encoding="utf-8", errors="ignore")
         m = LOCAL.search(text)
         if m:
             line = text[: m.start()].count("\n") + 1
             add("error", "paths", f"{rel(f)}:{line}", f"local path '{text[m.start():m.start() + 40].splitlines()[0]}': use a relative path or a name")
-        if f.suffix.lower() == ".md" and "diagrams" not in f.parts and len(text.splitlines()) > 70:
+        if f.suffix.lower() == ".md" and "diagrams" not in f.parts and f.name not in OWN_TAB and len(text.splitlines()) > 70:
             if len(re.findall(r"^## ", text, re.M)) < 3 and len(re.findall(r"^### ", text, re.M)) < 3:
                 add("warn", "sections", rel(f), f"{len(text.splitlines())} lines with fewer than three '## ' sections: one long page in the hub")
         if f.suffix.lower() in (".html", ".htm") and len(text) > 40_000 and len(re.findall(r"<h2[\s>]", text, re.I)) < 3 and "floorplan" not in f.parts:
