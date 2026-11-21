@@ -37,6 +37,8 @@ Intent → Spec → Design → Build → Test → Deploy → Maintain ─┐
 | `inputs/` | PRDs, design exports, tracker snapshots, meeting notes. Received material, never edited | anyone |
 | `outputs/` | Gap analyses, review reports, test runs, release notes, runbooks | commands and agents |
 | `outputs/impact.json` | What this work changes in the system, as data: components, flows (communication matrix), infrastructure, screens, use cases, decisions, each with `change` and `where`. Merged across specs into the system model by `tools/impact.py` | `/design` writes it, `/build` and `/deploy` keep it true |
+| `outputs/diagrams/<phase>/v<N>-<date>.md` | The phase as pictures: Mermaid diagrams chosen for that phase (below). The hub's Visual mode shows them | every phase command |
+| `outputs/floorplan/v<N>-<date>.html` | A Floorplan map of the work item's repos: parts, files, endpoints and the requests between them, across repos | `/build` |
 
 ## System impact (`outputs/impact.json`)
 
@@ -71,3 +73,25 @@ Engineering Hub shows it per work item and as the system map in Knowledge).
 - Once a file's phase is approved it changes only with a row in its Change log and a fresh approval.
 - `python3 tools/spec.py check` must pass before a phase moves on. CI can run the same command.
 - When the work ships and has run cleanly, set the phase to `done`. The folder stays: it is the record.
+
+## Diagrams (`outputs/diagrams/`)
+
+Each phase explains itself in pictures as well as in documents. The phase command writes
+`outputs/diagrams/<phase>/v<N>-<date>.md` (phase: `intent`, `spec`, `design`, `build`, `test`, `deploy`,
+`maintain`): a short Markdown file, one `## <diagram title>` per diagram, a one-line caption saying what to read
+from it, then one ` ```mermaid ` block. Draw only from the phase's documents and the code, never invented; a fact
+that is not known yet is a node marked `?`. Start each title with its kind (`Containers`, `Sequence: <flow>`, `Data model`, `Deployment`, `Pattern: <name>`,
+`States: <entity>`, `Journey: <name>`, `Requirement map`): the hub places each diagram in the section of the phase's document
+that it explains (Sequence in "Sequence", Data model in "Data") and groups the rest by kind. Like every `v<N>-<date>` file, a version is frozen once committed: a
+rerun writes the next version.
+
+| Phase | Diagrams |
+|---|---|
+| intent | **The idea on one page** (problem, who, value, scope in and out, success measures, risks, as a `mindmap` or a `flowchart` of cards); **context** (users, our system, outside systems: `flowchart` or C4 context) |
+| spec | **Requirement map** (requirements → acceptance criteria, grouped by story); **a flow per user journey** (`flowchart`); **states** for every entity with a status (`stateDiagram-v2`) |
+| design | **Containers** (C4 container: apps, proxy, gateway, services, stores, brokers, providers); **a sequence per contract** (`sequenceDiagram`); **data model** (`erDiagram`); **deployment** (clusters, namespaces, environments); **the chosen patterns** (event flow, saga states, outbox, before and after routing: `architecture-patterns`) |
+| build | **Task dependencies** (`flowchart` of tasks.md); **what changed where** (components and repos from `impact.json`); the code map is the Floorplan (`outputs/floorplan/`) |
+| test | **Coverage by layer** (criteria per layer, passing and failing); **the test path** of the main journey |
+| deploy | **Deploy order** across repos, with migrations and flags; **promotion** DEV → UAT → PROD with the checks between; **rollback** |
+| maintain | **Runbook flow** (symptom → check → action); **incident timeline** since release |
+

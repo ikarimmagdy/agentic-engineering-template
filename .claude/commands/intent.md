@@ -13,5 +13,6 @@ Input: $ARGUMENTS
    Record them: `python3 tools/spec.py link <KEY> --initiative <K> --epic <K> --story <K> --source <url>` (repeat flags as needed).
 3. Write `intent.md` from the sources only: problem, who, outcome, success measures, scope, constraints. Anything the sources do not say goes under Open questions, never invented.
 4. If existing code is involved, run `/gap <KEY>` to fill "What already exists".
-5. Show the intent to the owner. When they approve: `python3 tools/spec.py approve <KEY> intent --by <name>` then `python3 tools/spec.py phase <KEY> spec`.
-6. Commit: `<KEY>: intent`.
+5. **Diagrams:** write the phase's diagrams to `outputs/diagrams/intent/v<N>-<date>.md` (`specs/README.md`, "Diagrams"): the idea on one page (problem, who, value, scope in and out, success measures, risks) and the context (users, our system, outside systems). Draw only what the documents say.
+6. Show the intent to the owner. When they approve: `python3 tools/spec.py approve <KEY> intent --by <name>` then `python3 tools/spec.py phase <KEY> spec`.
+7. Commit: `<KEY>: intent`.

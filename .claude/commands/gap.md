@@ -10,4 +10,5 @@ Spec: $ARGUMENTS
 3. Write its result to the spec's `outputs/gap-analysis.md`: one row per capability or requirement with state (built / partial / missing), evidence `repo:path:line`, and what would change.
 4. Copy the summary into intent.md "What already exists" and the `Existing` column of spec.md.
 5. List every repo it touched in `status.json` → `repos`.
-6. Commit: `<KEY>: gap analysis`.
+6. **Architecture:** add an "Architecture" section to `outputs/gap-analysis.md` with the styles and patterns the existing code already uses and its architecture problems (skills `architecture-patterns`, `data-architecture`).
+7. Commit: `<KEY>: gap analysis`.

@@ -11,4 +11,5 @@ Release: $ARGUMENTS
 4. Confirm no published document version or accepted ADR is contradicted by what ships.
 5. Deploy through the project's pipeline (see CLAUDE.md → Commands / Deploy). Never deploy from a laptop to a shared environment.
 6. Smoke-test the deployed environment and report the result with the URL. Set `env` on the `infra` entries of `outputs/impact.json` to include the environment just deployed, and `ref` to the released tag.
-7. After production: `tools/spec.py phase <KEY> maintain`.
+7. **Diagrams:** write the phase's diagrams to `outputs/diagrams/deploy/v<N>-<date>.md` (`specs/README.md`, "Diagrams"): deploy order across repos with migrations and flags, promotion DEV → UAT → PROD with the checks between, and rollback. Draw only what the documents say. Sidecars, queues, dead letters and their alerts come from the patterns in plan.md.
+8. After production: `tools/spec.py phase <KEY> maintain`.
