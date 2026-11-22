@@ -26,6 +26,14 @@ Then fill in the placeholders (`{{...}}`):
 4. `local-env/.env.example`: the configuration names your services need (values go in `local-env/.env`, never committed).
 5. `constitution/`: keep P-1…P-7; add your product invariants and architecture rules.
 
+## One template, many independent entities
+
+This template holds only what is common to any project: the loop, its agents, commands, hooks, rules, tools and the
+Engineering Hub. Each company or product that uses it gets its own copy, with its own data, its own repo and its own
+hub, and shares nothing with the others. A copy adds what is specific to it as new files (its own agents, commands,
+rules, skills); updates never touch those. Editing a file the template owns stops that file receiving updates, so put
+entity-specific behaviour in a new file instead, and move anything that turns out to be common up into the template.
+
 ## Keep a workspace up to date
 
 The template keeps improving; a workspace inherits it with one command, run from the workspace:

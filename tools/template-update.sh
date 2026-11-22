@@ -140,6 +140,8 @@ if [ -f "$SRC/hub/tools/engine-files.txt" ]; then
   if [ -f "$WS/hub/content/brand.json" ]; then
     HUB_TEMPLATE_DIR="$SRC/hub" bash "$SRC/hub/tools/hub-update.sh" $([ "$DRY" = 1 ] && echo --dry-run) "$WS/hub" 2>&1 \
       | grep -E '^==> hub|^  (add|update|retire)|rror' | sed 's/^/  hub: /' || true
+  elif [ "$ADOPT" = 1 ] && other="$(find "$WS" -maxdepth 4 -path '*/code' -prune -o -path '*/node_modules' -prune -o -path '*/content/brand.json' -print 2>/dev/null | head -1)" && [ -n "$other" ]; then
+    echo "  hub: this workspace already has a hub at ${other#$WS/}; no starter hub added"
   elif [ "$ADOPT" = 1 ]; then
     echo "  add      hub/ (starter hub: fill hub/content/brand.json, then cd hub && node build.mjs)"
     [ "$DRY" = 1 ] || { cp -R "$SRC/hub" "$WS/hub"; rm -rf "$WS/hub/content/kb-src" "$WS/hub/content/learning-src" "$WS/hub/content/manifest.json"; }
