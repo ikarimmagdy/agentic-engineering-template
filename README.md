@@ -26,6 +26,22 @@ Then fill in the placeholders (`{{...}}`):
 4. `local-env/.env.example`: the configuration names your services need (values go in `local-env/.env`, never committed).
 5. `constitution/`: keep P-1…P-7; add your product invariants and architecture rules.
 
+## Keep a workspace up to date
+
+The template keeps improving; a workspace inherits it with one command, run from the workspace:
+
+```bash
+tools/template-update.sh --dry-run    # what would change
+tools/template-update.sh --adopt      # first time: carry the whole template ("full" mode)
+tools/template-update.sh              # every time after
+```
+
+Only the paths in `tools/template-files.txt` belong to the template. A file still exactly as some template
+version shipped it is replaced; a file you edited is three-way merged against the version recorded in
+`.template-version`, or kept and listed when that is not possible. Files you added are never touched, and
+`CLAUDE.md`, `constitution/`, `docs/`, specs and everything else that is yours are never read. Commit the result.
+Template maintainers bump `VERSION` with every change.
+
 ## Where the code is
 
 `code/` is empty in a fresh clone on purpose. Each service stays in its own repository and is

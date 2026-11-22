@@ -5,6 +5,7 @@ import glob
 import json
 import os
 import re
+import subprocess
 import sys
 
 project = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
@@ -51,9 +52,37 @@ def specs_in_flight() -> list[str]:
     return out
 
 
+def team_sync() -> list[str]:
+    """Work items the team cannot see yet, and team work this clone does not have."""
+    def git(*args, timeout=8):
+        try:
+            r = subprocess.run(["git", "-C", project, *args], capture_output=True, text=True, timeout=timeout)
+            return r.stdout.strip() if r.returncode == 0 else None
+        except Exception:
+            return None
+    if git("rev-parse", "--abbrev-ref", "@{u}") is None:
+        return []
+    git("fetch", "--quiet")
+    out = []
+    dirty = git("status", "--porcelain", "--", "specs/")
+    if dirty:
+        folders = sorted({l[3:].split("/")[1] for l in dirty.splitlines() if l[3:].startswith("specs/") and l[3:].count("/") >= 1})
+        out.append("Work items with changes the team cannot see (spec.py shares them on the next approve, phase or task; "
+                   "or commit and push): " + ", ".join(folders))
+    ahead, behind = git("rev-list", "--count", "@{u}..HEAD"), git("rev-list", "--count", "HEAD..@{u}")
+    if ahead and ahead != "0":
+        out.append(f"{ahead} local commits not pushed: run `git pull --rebase && git push` so the team and the hub see them.")
+    if behind and behind != "0":
+        out.append(f"The team pushed {behind} commits you do not have: run `git pull --rebase` before starting work.")
+    return out
+
+
 def main() -> None:
     json.load(sys.stdin)
     parts = []
+    sync = team_sync()
+    if sync:
+        parts.append("Team sync:\n" + "\n".join(f"- {s}" for s in sync))
     flight = specs_in_flight()
     if flight:
         parts.append("Specs in flight (/feature <KEY> for the next step):\n" + "\n".join(flight))

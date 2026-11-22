@@ -33,6 +33,7 @@ recorded here in the same turn.
 | `tools/hub_check.py`, `/hub-review` | Check work items against the rules the Engineering Hub relies on (phase diagrams, diagram kinds, version indexes, no laptop paths, sectioned documents, architecture choices) and bring existing ones in line. |
 | `usage/agent-runs/` | Agent-run counts people chose to share (per day, agent and count only), written by the hub's `tools/share_usage.py --push`; the hub's Home adds them up. Created on first share. |
 | `.claude/` | Agents, commands, hooks, path-scoped rules and skills for this project. |
+| `.template-version`, `tools/template-update.sh` | The template version this workspace carries and the command that brings later template changes in (`tools/template-files.txt` lists what the template owns). |
 | `examples/` | Worked example of the loop (data add-on), one file per step. Reference only. |
 
 ## Commands
@@ -63,6 +64,8 @@ Intent → Spec → Design → Build → Test → Deploy → Maintain → (back 
 - **session-start** — shows specs in flight, the latest requirements version, latest ADRs, and HANDOFF next steps.
 - **prompt-router** — points Claude at the right command (`/intent`, `/spec`, `/adr`, `/build`, `/test`, `/deploy`, `/fix-issue`) when a message matches.
 - **protect-published-versions** — blocks edits to any committed `docs/**/v<N>-<date>*` file.
+- **agent-log** — records each subagent start and end in `.claude/state/agent-runs.jsonl` (gitignored; agent, description, spec key, never the prompt) for the Engineering Hub's Agents view.
+- **Work items are shared at every gate**: `tools/spec.py` new, intake, link, approve, phase and task commit that work item's `specs/<KEY>-*/` folder, pull with rebase and push. Session start warns about unpushed work items and team commits not pulled. `SPEC_SHARE=local` commits without pushing.
 - **spec-gate** — blocks edits under `code/` unless a spec is in the build phase with intent, spec and design approved (`SPEC_GATE=off` for a recorded emergency fix).
 - **git pre-commit** (`.githooks/`) — refuses commits made with an identity other than `.claude/git-identity`. Enable once per clone: `git config core.hooksPath .githooks`.
 

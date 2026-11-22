@@ -1,0 +1,20 @@
+# Template-owned paths: tools/template-update.sh updates exactly these in a workspace, nothing else.
+# A line ending in / is a folder; its files are updated one by one, and files the workspace added
+# there itself are never touched or removed.
+# Never listed (they belong to the workspace): CLAUDE.md, HANDOFF.md, README.md, .gitignore,
+# .claude/git-identity, .claude/settings.local.json, constitution/, docs/, specs/<KEY>-*/, inputs/,
+# outputs/, planning/, local-env/, code/, repos.yaml.
+# Bump VERSION on every template change; the next update uses it to find the version a workspace has.
+.claude/agents/
+.claude/commands/
+.claude/hooks/
+.claude/rules/
+.claude/skills/
+.claude/settings.json
+.githooks/
+bin/
+tools/
+specs/README.md
+specs/_template/
+tests/README.md
+examples/

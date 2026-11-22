@@ -26,6 +26,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 
 PHASES = ["intent", "spec", "design", "build", "test", "deploy", "maintain", "done"]
@@ -232,6 +233,21 @@ def problems(d: str, target: str | None = None) -> list[str]:
     return errs
 
 
+def key_used(base: str, key: str) -> str:
+    """Where KEY was used before, on this laptop or by anyone on the remote: a spec folder in
+    specs/ now, in the history of any branch, or on an open pull request. Empty when free."""
+    if any(os.path.basename(d).startswith(key + "-") for d in glob.glob(os.path.join(base, "specs", "*"))):
+        return "a folder in specs/"
+    def git(*args):
+        r = subprocess.run(["git", "-C", base, *args], capture_output=True, text=True, timeout=60)
+        return r.stdout if r.returncode == 0 else ""
+    git("fetch", "--quiet", "origin", "+refs/heads/*:refs/remotes/origin/*", "+refs/pull/*/head:refs/remotes/origin/pr/*")
+    for line in git("log", "--all", "--format=%h %an", "--name-only", "--diff-filter=A", "--", "specs/").splitlines():
+        if line.startswith(f"specs/{key}-"):
+            return f"{line.split('/')[1]} in the git history (git log --all -- specs/{key}-*)"
+    return ""
+
+
 def cmd_new(a) -> None:
     base = root()
     if not re.match(r"^[A-Z][A-Z0-9_]*-\d+$", a.key):
@@ -241,6 +257,10 @@ def cmd_new(a) -> None:
     dest = os.path.join(base, "specs", f"{a.key}-{a.slug}")
     if os.path.exists(dest):
         sys.exit(f"{os.path.relpath(dest, base)} already exists")
+    used = key_used(base, a.key)
+    if used and not a.reuse_key:
+        sys.exit(f"{a.key} is already used: {used}. Use the tracker key, or the next free key; "
+                 "--reuse-key only if this is the same piece of work.")
     shutil.copytree(os.path.join(base, "specs", "_template"), dest)
     title = a.title or a.slug.replace("-", " ").capitalize()
     for p in glob.glob(os.path.join(dest, "**", "*"), recursive=True):
@@ -378,10 +398,56 @@ def cmd_json(a) -> None:
     print(json.dumps([summary(d) for d in spec_dirs(root())], indent=2, ensure_ascii=False))
 
 
+SHARED = ("new", "intake", "link", "approve", "phase", "task")
+
+
+def share(base: str, d: str) -> None:
+    """Commit this work item's folder and push it, so the team (and the shared hub) sees it now."""
+    mode = os.environ.get("SPEC_SHARE", "push").lower()
+    if mode == "off":
+        return
+    def git(*args, timeout=120):
+        return subprocess.run(["git", "-C", base, *args], capture_output=True, text=True, timeout=timeout)
+    if git("rev-parse", "--is-inside-work-tree").returncode != 0:
+        return
+    rel = os.path.relpath(d, base)
+    name = os.path.basename(d)
+    key = load(d).get("key") or name
+    event = (load(d).get("history") or [{}])[-1]
+    msg = f"{key}: {event.get('event', 'updated')}" + (f", {event['by']}" if event.get("by") else "")
+    git("add", "--", rel)
+    staged = git("diff", "--cached", "--quiet", "--", rel).returncode != 0
+    if staged:
+        r = git("commit", "-q", "-m", msg, "--", rel)
+        if r.returncode != 0:
+            print(f"share: not committed ({(r.stderr or r.stdout).strip()[:300]}); commit {rel} yourself", file=sys.stderr)
+            return
+    if mode == "local":
+        print(f"share: committed {rel} (SPEC_SHARE=local, not pushed)" if staged else "share: nothing new to commit", file=sys.stderr)
+        return
+    if git("remote").stdout.strip() == "":
+        print("share: no git remote; committed locally", file=sys.stderr)
+        return
+    ahead = git("rev-list", "--count", "@{u}..HEAD")
+    if not staged and ahead.returncode == 0 and ahead.stdout.strip() == "0":
+        return
+    pull = git("pull", "--rebase", "--autostash", "-q")
+    if pull.returncode != 0:
+        git("rebase", "--abort")
+        print("share: could not pull (conflict or offline); your commit is kept locally. "
+              "Run `git pull --rebase` and `git push` when you can; the next spec.py command retries.", file=sys.stderr)
+        return
+    push = git("push", "-q", "origin", "HEAD") if git("rev-parse", "--abbrev-ref", "@{u}").returncode == 0 else git("push", "-q", "-u", "origin", "HEAD")
+    if push.returncode != 0:
+        print(f"share: push failed ({(push.stderr or '').strip()[:200]}); kept locally, the next spec.py command retries", file=sys.stderr)
+        return
+    print(f"share: {msg} pushed", file=sys.stderr)
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
-    n = sub.add_parser("new"); n.add_argument("key"); n.add_argument("slug"); n.add_argument("--title")
+    n = sub.add_parser("new"); n.add_argument("key"); n.add_argument("slug"); n.add_argument("--title"); n.add_argument("--reuse-key", action="store_true")
     n.add_argument("--intake", choices=INTAKE_KINDS); n.add_argument("--ref"); n.add_argument("--summary")
     n.set_defaults(fn=cmd_new)
     sub.add_parser("list").set_defaults(fn=cmd_list)
@@ -402,6 +468,9 @@ def main() -> None:
     sub.add_parser("json").set_defaults(fn=cmd_json)
     a = p.parse_args()
     a.fn(a)
+    if a.cmd in SHARED:
+        base = root()
+        share(base, find(base, a.key))
 
 
 if __name__ == "__main__":
