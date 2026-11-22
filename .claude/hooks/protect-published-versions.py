@@ -1,23 +1,34 @@
 #!/usr/bin/env python3
 """PreToolUse (Edit|Write|MultiEdit): block edits to a published document version.
 
-A versioned document is any file under docs/ named v<N>-<YYYY-MM-DD>*. Once it
-is committed it has been seen, so it is frozen: the change goes into the next
-version instead. Untracked versions (still being drafted) stay editable.
+A versioned document is any file named v<N>-<YYYY-MM-DD>* anywhere in the
+project (docs/, outputs/ or elsewhere). Once it is committed it has been seen,
+so it is frozen: the change goes into the next version instead. Untracked
+versions (still being drafted) and gitignored files stay editable. Tracking is
+checked in the git repo that holds the file, so nested repos are covered too.
 """
 import json
 import os
 import re
 import subprocess
 import sys
+from typing import Optional
 
-VERSIONED = re.compile(r"(^|/)docs/(.+/)?v\d+-\d{4}-\d{2}-\d{2}[^/]*$")
+VERSIONED = re.compile(r"(^|/)v\d+-\d{4}-\d{2}-\d{2}[^/]*$")
 
 
-def is_tracked(path: str, cwd: str) -> bool:
+def repo_root(folder: str) -> Optional[str]:
     result = subprocess.run(
-        ["git", "ls-files", "--error-unmatch", path],
-        cwd=cwd, capture_output=True, text=True,
+        ["git", "rev-parse", "--show-toplevel"],
+        cwd=folder, capture_output=True, text=True,
+    )
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
+def is_tracked(rel: str, root: str) -> bool:
+    result = subprocess.run(
+        ["git", "ls-files", "--error-unmatch", rel],
+        cwd=root, capture_output=True, text=True,
     )
     return result.returncode == 0
 
@@ -26,11 +37,16 @@ def main() -> None:
     event = json.load(sys.stdin)
     path = (event.get("tool_input") or {}).get("file_path") or ""
     project = os.environ.get("CLAUDE_PROJECT_DIR") or event.get("cwd") or os.getcwd()
-    rel = os.path.relpath(path, project) if os.path.isabs(path) else path
-
-    if not VERSIONED.search(rel.replace(os.sep, "/")):
+    if not path or not VERSIONED.search(path.replace(os.sep, "/")):
         return
-    if not os.path.exists(os.path.join(project, rel)) or not is_tracked(rel, project):
+    path = os.path.realpath(path if os.path.isabs(path) else os.path.join(project, path))
+    if not os.path.exists(path):
+        return
+    root = repo_root(os.path.dirname(path))
+    if not root:
+        return
+    rel = os.path.relpath(path, root)
+    if not is_tracked(rel, root):
         return
 
     print(json.dumps({

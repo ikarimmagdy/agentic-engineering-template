@@ -77,9 +77,27 @@ def team_sync() -> list[str]:
     return out
 
 
+def identity_warning() -> str:
+    """The pre-commit hook only runs once core.hooksPath is set, so warn at session start too."""
+    path = os.path.join(project, ".claude", "git-identity")
+    if not os.path.exists(path):
+        return ""
+    expected = open(path, encoding="utf-8").readline().strip()
+    if not expected or "{{" in expected:
+        return ""
+    r = subprocess.run(["git", "-C", project, "config", "user.email"], capture_output=True, text=True)
+    actual = r.stdout.strip()
+    ok = actual.endswith(expected) if expected.startswith("@") else actual == expected
+    return "" if ok else (f"WARNING: git user.email is '{actual}', this project expects '{expected}'. "
+                          "Fix it before committing (see .githooks/pre-commit).")
+
+
 def main() -> None:
     json.load(sys.stdin)
     parts = []
+    warning = identity_warning()
+    if warning:
+        parts.append(warning)
     sync = team_sync()
     if sync:
         parts.append("Team sync:\n" + "\n".join(f"- {s}" for s in sync))

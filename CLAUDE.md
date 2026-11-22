@@ -64,7 +64,7 @@ Intent → Spec → Design → Build → Test → Deploy → Maintain → (back 
 ## Hooks (see `.claude/settings.json`)
 - **session-start** — shows specs in flight, the latest requirements version, latest ADRs, and HANDOFF next steps.
 - **prompt-router** — points Claude at the right command (`/intent`, `/spec`, `/adr`, `/build`, `/test`, `/deploy`, `/fix-issue`) when a message matches.
-- **protect-published-versions** — blocks edits to any committed `docs/**/v<N>-<date>*` file.
+- **protect-published-versions** — blocks edits to any committed `v<N>-<date>*` file, checked in the git repo that holds it.
 - **agent-log** — records each subagent start and end in `.claude/state/agent-runs.jsonl` (gitignored; agent, description, spec key, never the prompt) for the Engineering Hub's Agents view.
 - **Work items are shared at every gate**: `tools/spec.py` new, intake, link, approve, phase and task commit that work item's `specs/<KEY>-*/` folder, pull with rebase and push. Session start warns about unpushed work items and team commits not pulled. `SPEC_SHARE=local` commits without pushing.
 - **spec-gate** — blocks edits under `code/` unless a spec is in the build phase with intent, spec and design approved (`SPEC_GATE=off` for a recorded emergency fix).
