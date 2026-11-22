@@ -10,3 +10,4 @@ paths:
 - Breaking changes need a new version or an ADR.
 - Request and response models are explicit; never return internal objects as they are.
 - Errors use one documented shape across the API.
+- Never document a client-supplied amount, ID or role as trusted; the server validates it.

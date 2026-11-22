@@ -42,6 +42,15 @@
             "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/agent-log.py\""
           }
         ]
+      },
+      {
+        "matcher": "Bash|mcp__.*(jira|atlassian|linear).*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/ask-before-push.py\""
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -54,6 +63,12 @@
           }
         ]
       }
+    ]
+  },
+  "permissions": {
+    "ask": [
+      "Bash(git push *)",
+      "Bash(git push)"
     ]
   }
 }

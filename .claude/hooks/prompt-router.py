@@ -5,6 +5,7 @@
 - New or changed requirements        -> /spec for a feature, /req for product-wide ones.
 - A decision being made              -> /adr.
 - Build / test / deploy / a defect   -> /build, /test, /deploy, /fix-issue.
+- Push, PR or ticket status move     -> reminder that each needs the owner's OK first.
 
 Matching is keyword-based on purpose: a hook cannot understand intent, so it
 only reminds Claude which process applies. Claude still does the work.
@@ -34,11 +35,18 @@ ROUTES = [
      "Deploying: /deploy <KEY> <environment>. Confirm the environment with the owner first."),
     (re.compile(r"\b(bug|defect|incident|broken|regression in|500 error|crash(es|ing)?)\b", re.I),
      "Defect: /fix-issue starts with a failing test that reproduces it."),
+    (re.compile(r"\b(git push|and push|then push|push (it|this|that|them|the branch|the commits?|to (origin|remote|github))|"
+                r"open (a |the )?pr|move the ticket|transition (the )?ticket|mark (it|the ticket) (as )?done)\b", re.I),
+     "Pushing, opening a PR and moving a ticket's status are outward-facing. Confirm with the owner first; "
+     "local commits are fine."),
 ]
 
 
 def main() -> None:
-    prompt = (json.load(sys.stdin).get("prompt") or "")
+    try:
+        prompt = json.load(sys.stdin).get("prompt") or ""
+    except ValueError:
+        return
     notes = [note for pattern, note in ROUTES if pattern.search(prompt)]
     if notes:
         print(json.dumps({

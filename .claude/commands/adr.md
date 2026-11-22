@@ -9,4 +9,5 @@ Decision: $ARGUMENTS
 2. Copy `docs/adr/0000-template.md` to `docs/adr/NNNN-<kebab-slug>.md` and fill it: context, options considered, decision, consequences. Status: Proposed.
 3. Add the ADR to `docs/adr/README.md`.
 4. If it supersedes an earlier ADR, set that one's status to "Superseded by NNNN" (status lines are the only edit allowed on an accepted ADR).
-5. Ask the owner to accept. Only then change the status to Accepted and commit.
+5. If it changes a constitution rule, it also needs `/amend`.
+6. Ask the owner to accept. Only then change the status to Accepted and commit.

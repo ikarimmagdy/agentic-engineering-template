@@ -8,6 +8,9 @@ import re
 import subprocess
 import sys
 
+SECTION = re.compile(r"^##\s+(next|open|blockers)\b", re.IGNORECASE)
+PLACEHOLDER = re.compile(r"^\s*-?\s*\(?(not recorded|none recorded|none|nothing yet)\)?\.?\s*$", re.IGNORECASE)
+
 project = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
 
 
@@ -29,12 +32,13 @@ def handoff_next() -> list[str]:
     if not os.path.exists(path):
         return []
     lines, grab = [], False
-    for line in open(path, encoding="utf-8"):
-        if line.startswith("## "):
-            grab = line.strip().lower() in ("## next", "## blockers")
-            continue
-        if grab and line.strip():
-            lines.append(line.rstrip())
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            if line.startswith("## "):
+                grab = bool(SECTION.match(line))
+                continue
+            if grab and line.strip() and not PLACEHOLDER.match(line):
+                lines.append(line.rstrip())
     return lines[:8]
 
 
@@ -93,7 +97,10 @@ def identity_warning() -> str:
 
 
 def main() -> None:
-    json.load(sys.stdin)
+    try:
+        json.load(sys.stdin)
+    except ValueError:
+        pass
     parts = []
     warning = identity_warning()
     if warning:
@@ -112,7 +119,7 @@ def main() -> None:
         parts.append("Latest ADRs: " + ", ".join(adrs))
     nxt = handoff_next()
     if nxt:
-        parts.append("From HANDOFF.md (next / blockers):\n" + "\n".join(nxt))
+        parts.append("From HANDOFF.md (next / open / blockers):\n" + "\n".join(nxt))
     if parts:
         print(json.dumps({
             "hookSpecificOutput": {

@@ -8,7 +8,7 @@ You write tests. Start from the acceptance criterion in the spec's `spec.md` and
 
 - Write at the layer named; if a lower layer can prove it, say so and propose the change.
 - Name the test with the criterion ID (`..._AC_R1_1`, or `AC-R1.1` in the description) so it can be traced.
-- Cover the happy path, the edge cases the criterion names, and one failure path.
+- Cover the happy path, the edge cases the criterion names, and at least one failure path (nulls, empty collections, error branches, cancellation).
 - Match the repo's existing test framework and style; do not add a new framework without an ADR.
-- Tests are deterministic: no real providers, no shared environments, no sleeps; mocks or containers from `local-env/`.
-- Run the tests and update the row in test-plan.md (`written` / `passing` / `failing`). Report what you covered and what you could not.
+- Tests are deterministic: no real providers, no shared environments, no sleeps; mocks or containers from `local-env/`. Never put real personal data or tokens in fixtures.
+- Run the tests (and the `verify` skill before finishing) and update the row in test-plan.md (`written` / `passing` / `failing`). Report what you covered and what you could not.

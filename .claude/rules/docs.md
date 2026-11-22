@@ -8,7 +8,10 @@ paths:
 
 - Versioned documents are `v<N>-<YYYY-MM-DD>.<ext>` in their own folder with an `index.html` or `README.md` listing versions newest first.
 - A committed version is frozen (the protect-published-versions hook enforces it). Copy to the next version to change it.
-- Every number carries a source, or is labelled as an assumption. Every other claim cites its source (file:line, commit, ticket, a named person and date) or is listed under Unknowns.
+- Every number carries a source, or is labelled as an assumption. Every other claim cites its source (file:line, commit, ticket, a named person and date) or is listed under Unknowns. Never invent product terms, SLAs or integration details.
+- When code and docs disagree, the code is the truth and the doc is the bug: fix the doc in the same change.
+- `inputs/` is raw input and is never edited.
+- No top-level `*.md` status or summary files in a repo root; progress belongs in the ticket or the spec.
 
 ## Design and wording
 

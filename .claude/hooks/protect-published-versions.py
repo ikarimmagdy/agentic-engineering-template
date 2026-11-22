@@ -34,7 +34,10 @@ def is_tracked(rel: str, root: str) -> bool:
 
 
 def main() -> None:
-    event = json.load(sys.stdin)
+    try:
+        event = json.load(sys.stdin)
+    except ValueError:
+        return
     path = (event.get("tool_input") or {}).get("file_path") or ""
     project = os.environ.get("CLAUDE_PROJECT_DIR") or event.get("cwd") or os.getcwd()
     if not path or not VERSIONED.search(path.replace(os.sep, "/")):
