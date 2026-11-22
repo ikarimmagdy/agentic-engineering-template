@@ -6,6 +6,13 @@
 ## Approach
 {{One paragraph: how the requirements are met and why this way.}}
 
+## Architecture choices
+From `architecture-patterns` and `data-architecture` ("How to choose"). A row with a real alternative is an ADR.
+
+| Decision | Chosen | Alternatives considered | Why | Rules and ADRs |
+|---|---|---|---|---|
+| {{boundary call, consistency, failure handling, store}} | {{pattern or style}} | {{the others weighed}} | {{reason}} | {{constitution rule, ADR NNNN}} |
+
 ## Components touched
 | Repo | Component | Change | Requirements | Rules file |
 |---|---|---|---|---|

@@ -23,13 +23,15 @@ written it.
    - **index**: add the folder's `README.md`, versions newest first, one line each on what changed (`.claude/rules/docs.md`).
    - **sections**: split the document into `## ` sections (Markdown) or `<h2>` sections (HTML), content unchanged.
    - **design**: run the `architect` agent (skills `architecture-patterns`, `data-architecture`) to add "Architecture
-     choices" to plan.md from the existing design and code: what was chosen, the alternatives, why, the constitution
-     rules it relies on. A real choice not yet recorded becomes a proposed ADR (`/adr`).
+     choices" to plan.md from the existing design, ADRs and code: what was chosen, the alternatives, why, the
+     constitution rules it relies on. No decision changes; a real choice not yet recorded becomes a proposed ADR
+     (`/adr`). Add a Change log row saying the section records existing decisions.
 3. **Existing code** (work items in build or later): run the `gap-analyst` architecture check on the item's repos
-   (the styles and patterns the code already uses, and where it breaks them: synchronous chains to slow providers,
-   shared tables, providers without timeout, retry and circuit breaker, a database write and an event that can drift
-   apart, retried charges without an idempotency key). Add each problem to the "Architecture" section of
-   `outputs/gap-analysis.md` (or to `outputs/findings.json` in the `architecture` area, where the workspace keeps one). This command never edits code: a fix becomes a task through `/tasks`.
+   (the styles and patterns the code already uses, and where it breaks them: synchronous calls to slow outside
+   systems, cross-component table access, outside calls without timeout, retry and circuit breaker, a database write
+   and an outside message that can drift apart, retried work that is not idempotent). Add each problem to the
+   "Architecture" section of `outputs/gap-analysis.md`, write `outputs/review/architecture.md` and
+   `outputs/review/scope.md`, and append each problem to `outputs/findings.json` in the `architecture` area (`/gap` step 8). This command never edits code: a fix becomes a task through `/tasks`.
 4. Build or later without `outputs/floorplan/`: offer to make the code map of the item's repos (`/build`, "Code map").
 5. Commit each work item's folder on its own: `<KEY>: hub review (<rules fixed>)`, then pull with rebase and push, as
    `tools/spec.py` shares a work item.

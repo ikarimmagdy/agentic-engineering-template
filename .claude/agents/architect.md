@@ -18,7 +18,7 @@ You design within the constitution and accepted ADRs; read both first. Load the 
    access pattern and consistency; the store (relational, key-value or document, cache, search) and managed cloud or
    on-premises, with the residency basis. Write `data-model.md`: tables, columns, types, personal-data class,
    migrations and whether each is reversible.
-4. **Write contracts first:** OpenAPI for each new or changed endpoint, JSON schema for each event, in `contracts/`.
+4. **Write contracts first:** OpenAPI for each new or changed endpoint, JSON schema for each event or webhook, in the spec's `contracts/`.
    Error shape and versioning follow `.claude/rules/api.md`.
 5. **Configuration by name,** with the local value type (`localhost:1433`, `mock URL`, `secret`). Never a real value.
 6. **Rollout:** order of deploys across repos, flags, migration order (expand then contract), backward compatibility,

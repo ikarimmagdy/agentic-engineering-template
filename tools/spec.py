@@ -2,15 +2,20 @@
 """Specs in flight: create, move through the loop, check, export.
 
   python3 tools/spec.py new <KEY> <slug> [--title "..."] [--intake KIND --ref R]
-  python3 tools/spec.py intake <KEY> idea|jira|github-issue|pr [--ref R] [--summary S]
+  python3 tools/spec.py intake <KEY> idea|tracker|github-issue|pr [--ref R] [--summary S]
   python3 tools/spec.py list
   python3 tools/spec.py show <KEY>
   python3 tools/spec.py approve <KEY> intent|spec|design [--by NAME]
-  python3 tools/spec.py phase <KEY> <phase> [--force]
+  python3 tools/spec.py phase <KEY> <phase> [--force --note "why"]
   python3 tools/spec.py task <KEY> <task-id> todo|doing|review|done|blocked
   python3 tools/spec.py link <KEY> [--initiative K] [--epic K]... [--story K]... [--source URL]... [--repo R]...
   python3 tools/spec.py check [KEY]
   python3 tools/spec.py json
+
+new, intake, link, approve, phase and task share the work item: they commit its specs/<KEY>-*/ folder
+(nothing else), pull with rebase, and push, so every approval and phase move reaches the team the
+moment it happens. A failed push is reported and retried by the next command. SPEC_SHARE=local
+commits without pushing; SPEC_SHARE=off does neither.
 
 Outputs the json export also reads: outputs/review/<area>.md, outputs/findings.json,
 outputs/feedback/v<N>-<date>.md (see specs/README.md).
@@ -35,7 +40,8 @@ TASK_STATES = ["todo", "doing", "review", "done", "blocked"]
 LAYERS = ["unit", "component", "functional", "api", "mobile", "e2e"]
 TEST_STATES = ["planned", "written", "passing", "failing"]
 APPROVAL_FILE = {"intent": "intent.md", "spec": "spec.md", "design": "plan.md"}
-INTAKE_KINDS = ["idea", "jira", "github-issue", "pr"]
+INTAKE_KINDS = ["idea", "tracker", "github-issue", "pr"]
+LEGACY_INTAKE = {"jira": "tracker"}  # older name, still accepted
 REVIEW_AREAS = ["scope", "architecture", "infra", "apis", "data", "localization", "ui-ux", "security", "tests"]
 SEVERITIES = ["critical", "high", "medium", "low"]
 LOOP_FILES = ["intent.md", "spec.md", "plan.md", "tasks.md", "test-plan.md"]
@@ -53,7 +59,7 @@ NEXT = {
 
 REQ_ROW = re.compile(r"^\|\s*([A-Z][A-Z0-9_]*-\d+-R(\d+))\s*\|", re.M)
 AC_DEF = re.compile(r"\*\*AC-R(\d+)\.(\d+)\*\*")
-TEST_ROW = re.compile(r"^\|\s*(AC-R\d+\.\d+)\s*\|\s*([a-z-]+)\s*\|([^|]*)\|\s*([a-z]+)\s*\|\s*$", re.M)
+TEST_ROW = re.compile(r"^\|\s*(AC-R\d+\.\d+)\s*\|\s*([a-z0-9-]+)\s*\|([^|]*)\|\s*([a-z]+)\s*\|\s*$", re.M)
 TASK_ROW = re.compile(r"^(\|\s*(T\d+(?:\.\d+)?)\s*\|.*\|\s*)([a-z]+)(\s*\|\s*)$", re.M)
 STATUS_LINE = re.compile(r"^\*\*Status:\*\*.*$", re.M)
 
@@ -131,6 +137,22 @@ def next_step(st: dict, tk: list[dict]) -> str:
     return NEXT.get(st["phase"], "")
 
 
+def git_name(base: str) -> str:
+    r = subprocess.run(["git", "-C", base, "config", "user.name"], capture_output=True, text=True)
+    return r.stdout.strip() or os.environ.get("USER", "")
+
+
+def first_author(d: str) -> dict | None:
+    """Who committed this work item's status.json first, for items created before started_by was recorded."""
+    r = subprocess.run(["git", "-C", d, "log", "--diff-filter=A", "--follow", "--format=%an|%ad", "--date=short", "--", "status.json"],
+                       capture_output=True, text=True)
+    lines = [ln for ln in r.stdout.splitlines() if "|" in ln]
+    if not lines:
+        return None
+    name, date = lines[-1].split("|", 1)
+    return {"name": name, "date": date}
+
+
 def summary(d: str) -> dict:
     st = load(d)
     tk = tasks(d)
@@ -142,6 +164,7 @@ def summary(d: str) -> dict:
         "key": st["key"], "title": st["title"], "folder": os.path.basename(d), "phase": st["phase"],
         "approved": st["approved"], "tracker": st.get("tracker", {}), "repos": st.get("repos", []),
         "updated": st.get("updated"), "next": next_step(st, tk),
+        "started_by": st.get("started_by") or first_author(d), "created": st.get("created"),
         "requirements": len(requirements(d)), "criteria": len(acs),
         "criteria_tested": len([a for a in acs if a in covered]),
         "criteria_passing": len([a for a in acs if a in passing]),
@@ -269,8 +292,10 @@ def cmd_new(a) -> None:
             s = s.replace("{{KEY}}", a.key).replace("{{TITLE}}", title).replace("{{DATE}}", today())
             open(p, "w", encoding="utf-8").write(s)
     st = load(dest)
-    st["history"].append({"date": today(), "event": "created"})
+    st["started_by"] = {"name": git_name(base), "date": today()}
+    st["history"].append({"date": today(), "event": "created", "by": st["started_by"]["name"]})
     if a.intake:
+        a.intake = LEGACY_INTAKE.get(a.intake, a.intake)
         st["intake"] = {"kind": a.intake, "ref": a.ref, "summary": a.summary}
         st["history"].append({"date": today(), "event": f"intake {a.intake}" + (f" {a.ref}" if a.ref else "")})
     save(dest, st)
@@ -320,8 +345,12 @@ def cmd_phase(a) -> None:
     errs = problems(d, a.phase)
     if errs and not a.force:
         sys.exit(f"Cannot move {a.key} to {a.phase}:\n- " + "\n- ".join(errs))
+    if errs and not a.note:
+        sys.exit("--force needs --note: say why the gates are skipped (where it really is, who said so)")
     st = load(d)
-    event = {"date": today(), "event": f"phase {st['phase']} -> {a.phase}"}
+    event = {"date": today(), "event": f"phase {st['phase']} -> {a.phase}", "by": git_name(root())}
+    if a.note:
+        event["note"] = a.note
     if errs:
         event["forced"] = errs
     st["phase"] = a.phase
@@ -373,6 +402,7 @@ def cmd_link(a) -> None:
 def cmd_intake(a) -> None:
     d = find(root(), a.key)
     st = load(d)
+    a.kind = LEGACY_INTAKE.get(a.kind, a.kind)
     st["intake"] = {"kind": a.kind, "ref": a.ref, "summary": a.summary}
     st.setdefault("history", []).append({"date": today(), "event": f"intake {a.kind}" + (f" {a.ref}" if a.ref else "")})
     save(d, st)
@@ -448,21 +478,23 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
     n = sub.add_parser("new"); n.add_argument("key"); n.add_argument("slug"); n.add_argument("--title"); n.add_argument("--reuse-key", action="store_true")
-    n.add_argument("--intake", choices=INTAKE_KINDS); n.add_argument("--ref"); n.add_argument("--summary")
+    n.add_argument("--intake", choices=INTAKE_KINDS + list(LEGACY_INTAKE)); n.add_argument("--ref"); n.add_argument("--summary")
     n.set_defaults(fn=cmd_new)
     sub.add_parser("list").set_defaults(fn=cmd_list)
     s = sub.add_parser("show"); s.add_argument("key"); s.set_defaults(fn=cmd_show)
     ap = sub.add_parser("approve"); ap.add_argument("key"); ap.add_argument("what", choices=APPROVABLE)
     ap.add_argument("--by"); ap.set_defaults(fn=cmd_approve)
     ph = sub.add_parser("phase"); ph.add_argument("key"); ph.add_argument("phase", choices=PHASES)
-    ph.add_argument("--force", action="store_true"); ph.set_defaults(fn=cmd_phase)
+    ph.add_argument("--force", action="store_true")
+    ph.add_argument("--note", help="why: required with --force (for example where the work is really deployed)")
+    ph.set_defaults(fn=cmd_phase)
     t = sub.add_parser("task"); t.add_argument("key"); t.add_argument("task"); t.add_argument("status", choices=TASK_STATES)
     t.set_defaults(fn=cmd_task)
     lk = sub.add_parser("link"); lk.add_argument("key"); lk.add_argument("--initiative")
     for flag in ("--epic", "--story", "--source", "--repo"):
         lk.add_argument(flag, action="append")
     lk.set_defaults(fn=cmd_link)
-    ik = sub.add_parser("intake"); ik.add_argument("key"); ik.add_argument("kind", choices=INTAKE_KINDS)
+    ik = sub.add_parser("intake"); ik.add_argument("key"); ik.add_argument("kind", choices=INTAKE_KINDS + list(LEGACY_INTAKE))
     ik.add_argument("--ref"); ik.add_argument("--summary"); ik.set_defaults(fn=cmd_intake)
     c = sub.add_parser("check"); c.add_argument("key", nargs="?"); c.set_defaults(fn=cmd_check)
     sub.add_parser("json").set_defaults(fn=cmd_json)

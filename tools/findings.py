@@ -107,15 +107,16 @@ def cmd_classify(a) -> None:
         if a.force or not f.get("team"):
             changed += f.get("team") != team
             f["team"] = team
-    json.dump(data, open(p, "w", encoding="utf-8"), indent=1, ensure_ascii=False)
-    open(p, "a", encoding="utf-8").write("\n")
+    with open(p, "w", encoding="utf-8") as fh:
+        json.dump(data, fh, indent=1, ensure_ascii=False)
+        fh.write("\n")
     print(f"{os.path.relpath(p, ROOT)}: {len(data.get('findings', []))} findings, {changed} values set")
     cmd_summary(a)
 
 
 def cmd_summary(a) -> None:
     rows = json.load(open(find(a.key), encoding="utf-8")).get("findings", [])
-    for field in ("type", "component", "team"):
+    for field in ("type", "component", "team", "severity"):
         c = collections.Counter(r.get(field) or "Not set" for r in rows)
         print(f"\n{field}:\n" + "\n".join(f"  {n:>4}  {k}" for k, n in c.most_common()))
 

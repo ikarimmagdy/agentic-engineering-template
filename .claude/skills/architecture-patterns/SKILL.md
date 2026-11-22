@@ -8,8 +8,9 @@ architect reuses before adding. Keep it true as work items land.
 
 ## How to choose
 
-Work through these in order and write the answers into `plan.md` under "Architecture choices". Every row where you
-picked one option over another is a proposed ADR (`/adr`).
+Work through these in order and write the answers into `plan.md` under "Architecture choices" (a table: decision,
+chosen, alternatives considered, why, rules and ADRs it relies on). Every row where you picked one option over another
+is a proposed ADR (`/adr`).
 
 1. **What crosses a boundary?** List each call between components (apps, gateways, services, providers).
    For each: does the caller need the answer to continue (synchronous), or only that it will happen (asynchronous)?
@@ -35,7 +36,9 @@ and an event must not drift apart.
 |---|---|---|---|---|
 | **REST (synchronous)** | The caller needs the answer now; reads; commands with an immediate result. | A chain of three or more services in one request; slow providers in the customer's path. | Simple and debuggable; couples availability (if B is down, A fails). | _fill in_ |
 | **Events (publish / subscribe)** | Something happened and several services may react; the publisher must not know them. | The publisher needs a result; ordering across entities matters and the broker cannot keep it. | Loose coupling and independent scaling; eventual consistency, harder tracing. | _fill in_ |
+| **Webhooks** | A system outside ours must react to something that happened, without polling. | The receiver needs to answer synchronously. | No polling; at-least-once delivery, so receivers deduplicate on an id; sign every payload. | _fill in_ |
 | **Message broker / work queue** | Work that can wait, retries with back-off, smoothing peaks, one consumer per message. | Request/response disguised as a queue; tiny volumes where a direct call is clearer. | Durability and retries; a broker to run, dead letters to watch. | _fill in_ |
+| **Job queue in the database** | Work that can wait, at modest volume, where one database already holds the data (claim rows with `FOR UPDATE SKIP LOCKED` or equivalent). | Several independent consumers or very high volume: use a broker. | Enqueued in the same transaction as the change, no extra system; polling and lock timeouts to tune. | _fill in_ |
 | **CQRS** | Reads and writes have very different shapes or loads (reporting, search, dashboards). | Plain CRUD; one team, small data. | Fast reads; two models to keep in step (usually through events). | _fill in_ |
 
 Broker choice: use what the platform already runs for the service family. A new broker type is an ADR and a request
@@ -48,7 +51,7 @@ to the platform team, not a design detail.
 | **Saga, orchestrated** | A business process spans services and needs compensation (order → payment → fulfilment → notification); one place should own the state. | Two steps in one service; a single database transaction would do. | _fill in_ |
 | **Saga, choreographed** | Few steps, each service reacts to the previous event, no central owner needed. | More than three or four steps (the flow becomes invisible). | _fill in_ |
 | **Transactional outbox** | A database change and the event about it must both happen or neither (audit, idempotency). | No event is published. | _fill in_ |
-| **Idempotent consumer** | Any consumer of a broker or a retried request (always). | — | _fill in_ |
+| **Idempotent consumer / idempotent write** | Any consumer of a broker, a redelivered webhook or a retried request (always); for writes, a unique key with insert-or-ignore. | — | _fill in_ |
 | **API gateway** | One entry for app traffic: routing, auth, rate limits, versioning. | Business logic in the gateway. | _fill in_ |
 | **Backend for frontend (BFF)** | One client needs a shaped API (mobile screens) that would bloat the shared one. | A BFF per screen. | _fill in_ |
 | **Sidecar** | Cross-cutting runtime needs beside a container without changing it (log shipping, proxies, certificates, legacy protocol bridges). | Business logic; anything the platform chart already provides. | _fill in_ |
@@ -60,7 +63,7 @@ to the platform team, not a design detail.
 
 | Pattern | Rule here | Where we use it |
 |---|---|---|
-| **Timeout** | Every outbound call has one, shorter than the caller's. | _fill in_ |
+| **Timeout** | Every outbound call has one, shorter than the caller's; database statements too. | _fill in_ |
 | **Retry with back-off** | Only for idempotent calls; capped; jitter. Never retry a charge without an idempotency key. | _fill in_ |
 | **Circuit breaker** | Every external provider; a clear fallback message for the customer. | _fill in_ |
 | **Bulkhead** | Separate pools for slow providers so one cannot starve the rest. | _fill in_ |
@@ -73,6 +76,7 @@ to the platform team, not a design detail.
 | REST | sequence per endpoint | contract test against the OpenAPI file | gateway route |
 | Events / broker | event flow: topic, producer, consumers, dead letter | publish and consume test; schema test against `contracts/` | queue and dead-letter config, alerts on the dead-letter count |
 | Saga | state diagram with each compensation | one test per compensation path; timeout of each step | process definition version, how in-flight instances migrate |
+| Job queue | sequence: enqueue in the transaction, claim, settle, retry | worker stopped mid-job is resumed once; retry with back-off; out of attempts fails | worker kinds and counts, alert on queue age |
 | Outbox | sequence: transaction, outbox row, relay, broker | crash between commit and publish still publishes once | relay job, its lag alert |
 | Idempotency | — | the same request twice changes state once | — |
 | Circuit breaker | where it sits on the sequence | open, half-open and fallback behaviour | thresholds by configuration name |
@@ -81,7 +85,8 @@ to the platform team, not a design detail.
 
 ## Diagram templates
 
-Write diagrams as Mermaid in the phase's diagram file (see "Diagrams" in the phase commands). Two starting points:
+Write diagrams as Mermaid in the phase's diagram file (`specs/README.md`, "Diagrams"); start each title with its kind
+(`Sequence: ...`, `Pattern: ...`, `States: ...`). Two starting points:
 
 ```mermaid
 sequenceDiagram

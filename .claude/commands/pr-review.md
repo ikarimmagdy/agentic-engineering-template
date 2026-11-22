@@ -11,4 +11,4 @@ PR: $ARGUMENTS
 4. For user-visible changes, confirm strings exist in every shipped language and, where the project uses flags, a feature flag gates the new behaviour. If a public API or contract changed, confirm its API doc changed in the same commit.
 5. Run the `verify` skill, or confirm it ran green on this diff.
 6. Report findings ranked by severity, then a merge / don't-merge verdict. Do not push, merge or move the ticket without the owner's go-ahead.
-7. If the PR belongs to a spec (its branch, title or a `status.json` → `sources` entry names the spec key), append each finding to that spec's `outputs/findings.json` with `kind: defect`, `status: open`, `source: <PR URL>` and the fields listed in `/gap` step 7.
+7. If the branch or PR belongs to a spec (its branch, title or a `status.json` → `sources` entry names the spec key), append each finding to that spec's `outputs/findings.json` with `kind: defect`, `status: open`, `source: <branch or PR URL>` and the fields listed in `/gap` step 8, then `python3 tools/findings.py classify <KEY>`.

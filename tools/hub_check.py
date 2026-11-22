@@ -5,7 +5,8 @@
 
 For each work item in specs/ (or the keys given):
   diagrams   every phase the item has reached has outputs/diagrams/<phase>/v<N>-<date>.md (specs/README.md, "Diagrams")
-  kinds      each diagram is a "## <Kind>: ..." section with one ```mermaid block; the kind places it in the hub
+  kinds      each diagram in the newest version per phase is a "## <Kind>: ..." section with one ```mermaid block;
+             the kind places it in the hub (older versions are frozen and not checked)
   index      every versioned folder (v<N>-<date>.* files) has a README.md or index.html listing its versions
   paths      no laptop path (files git ignores never leave the laptop and are skipped) (/Users/..., C:\\Users, file:///) in the item's documents or outputs
   sections   a long document has sections: Markdown over 70 lines with at least three "## " headings, HTML over
@@ -58,7 +59,12 @@ def check(d: Path) -> list[dict]:
     for ph, due in DIAGRAM_DUE.items():
         if due and at >= PHASES.index(due) and not any((d / "outputs" / "diagrams" / ph).glob("v*-*.md")):
             add("warn", "diagrams", f"outputs/diagrams/{ph}/", f"no {ph} diagrams; the item is past {ph} (write them with the phase command's Diagrams step)")
-    for f in sorted((d / "outputs" / "diagrams").glob("*/v*-*.md")):
+    def vnum(f: Path) -> int:
+        m = re.match(r"v(\d+)-", f.name)
+        return int(m.group(1)) if m else 0
+    # committed versions are frozen, so only the newest version of each phase is checked (the hub opens it)
+    newest = [max(fs, key=vnum) for fs in (list((d / "outputs" / "diagrams").glob(f"{ph}/v*-*.md")) for ph in PHASES) if fs]
+    for f in sorted(newest):
         text = f.read_text(encoding="utf-8")
         parts = re.split(r"^## +", text, flags=re.M)[1:]
         if not parts:

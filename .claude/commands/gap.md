@@ -13,15 +13,15 @@ Areas: `scope`, `architecture`, `infra`, `apis`, `data`, `localization`, `ui-ux`
 4. Copy the summary into intent.md "What already exists" and the `Existing` column of spec.md.
 5. List every repo it touched in `status.json` → `repos`.
 6. For each area asked, review the code against the checklist below and write `outputs/review/<area>.md`: what was read (repo, branch, commit), what was found, evidence `repo:path:line`. Always write `outputs/review/scope.md` with the repos, branches and commits read.
-7. **Architecture:** add an "Architecture" section to `outputs/gap-analysis.md` with the styles and patterns the existing code already uses and its architecture problems (skills `architecture-patterns`, `data-architecture`).
-8. Append every finding to `outputs/findings.json` (create it if missing) as one row:
+7. **Architecture:** add an "Architecture" section to `outputs/gap-analysis.md` with the styles and patterns the existing code already uses and its architecture problems (skills `architecture-patterns`, `data-architecture`): synchronous calls to slow outside systems in a request path, a component reading another component's tables, outside calls without timeout, retry and circuit breaker, a database change and an outside message that can drift apart, retried work that is not idempotent. Each problem is also a finding in the `architecture` area (step 8).
+8. Append every finding to `outputs/findings.json` (create it if missing: `{"version": 1, "key", "generated", "sources": [], "findings": []}`) as one row:
    `{"id", "title", "layer", "category", "dimension", "area", "severity", "scope", "kind", "location", "detail", "impact", "fix", "status", "source"}`
    - `area`: the area being reviewed; `layer`: the app, service or repo the finding is in (e.g. ios, android, web, api, a service name);
    - `severity`: critical | high | medium | low; `dimension`: security | functional | reliability | performance | maintainability | release;
    - `kind`: `gap` (the PRD asks for it, the code does not do it) or `defect` (the code does it wrong); `scope`: new feature code vs legacy if known, else null;
    - `status`: open; `source`: the review file path; `title` ≤ 90 characters. Update `generated` and `sources`.
    Ids stay stable: never renumber an existing finding.
-Then classify the new rows: `python3 tools/findings.py classify <KEY>` (type, component, team).
+   Then classify the new rows: `python3 tools/findings.py classify <KEY>` (type, component, team).
 9. Commit: `<KEY>: gap analysis` or `<KEY>: review <area>`.
 
 ## Area checklists
