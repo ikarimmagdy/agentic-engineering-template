@@ -94,7 +94,7 @@ is_old_template() {
   grep -qxF "$1 $(git hash-object "$WS/$1")" "$HIST"
 }
 
-n_same=0; n_add=0; n_upd=0; n_merge=0; n_kept=0; n_skip=0
+n_same=0; n_local=0; n_add=0; n_upd=0; n_merge=0; n_kept=0; n_skip=0
 KEPT=""
 while read -r f; do
   [ -n "$f" ] || continue
@@ -113,7 +113,9 @@ while read -r f; do
   elif [ -n "$BASE" ] && git -C "$SRC" cat-file -e "$BASE:./$f" 2>/dev/null; then
     t="$(mktemp)"; b="$(mktemp)"
     cp "$WS/$f" "$t"; git -C "$SRC" show "$BASE:./$f" > "$b"
-    if git merge-file -q "$t" "$b" "$SRC/$f" 2>/dev/null; then
+    if cmp -s "$b" "$SRC/$f"; then
+      n_local=$((n_local+1))   # the template has not changed this file since the recorded version
+    elif git merge-file -q "$t" "$b" "$SRC/$f" 2>/dev/null; then
       echo "  merge    $f"; n_merge=$((n_merge+1))
       [ "$DRY" = 1 ] || cat "$t" > "$WS/$f"
     else
@@ -127,7 +129,7 @@ done <<EOF
 $(list_files)
 EOF
 
-echo "==> $n_upd updated, $n_merge merged, $n_add added, $n_same already current, $n_kept kept with local edits$( [ "$n_skip" -gt 0 ] && echo ", $n_skip template files not used here (mode existing)")"
+echo "==> $n_upd updated, $n_merge merged, $n_add added, $n_same already current, $n_local local edits on files the template has not changed, $n_kept kept with local edits$( [ "$n_skip" -gt 0 ] && echo ", $n_skip template files not used here (mode existing)")"
 if [ -n "$KEPT" ]; then
   echo "    compare a kept file with:  diff <workspace>/<file> <template>/<file>"
 fi
