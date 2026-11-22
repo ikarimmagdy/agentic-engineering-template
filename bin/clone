@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Clone (or update) repos from repos.yaml into code/<name>/.
+# Usage: bin/clone <group|repo>... | --all | --list
+# GIT_HOST overrides the SSH host (default github.com), e.g. an ~/.ssh/config alias.
+# GIT_ORG overrides `org:` in repos.yaml.
+set -euo pipefail
+
+root="$(cd "$(dirname "$0")/.." && pwd)"
+host="${GIT_HOST:-github.com}"
+
+rows() {
+  python3 - "$root/repos.yaml" <<'PY'
+import sys
+org, rows, cur = "", [], None
+for line in open(sys.argv[1], encoding="utf-8"):
+    s = line.split("#", 1)[0].rstrip()
+    if not s.strip():
+        continue
+    t = s.strip()
+    if not line.startswith(" ") and t.startswith("org:"):
+        org = t.split(":", 1)[1].strip()
+        continue
+    if t.startswith("- "):
+        cur = {}
+        rows.append(cur)
+        t = t[2:]
+    if cur is not None and ":" in t:
+        k, v = t.split(":", 1)
+        cur[k.strip()] = v.strip().strip('"')
+for r in rows:
+    print("\t".join([r.get("name", ""), r.get("group", ""), r.get("default", "main"), r.get("production") or "-", org or "-"]))
+PY
+}
+
+[[ $# -ge 1 ]] || { echo "Usage: bin/clone <group|repo>... | --all | --list" >&2; exit 1; }
+
+if [[ "$1" == "--list" ]]; then
+  printf "%-36s %-14s %-10s %s\n" REPO GROUP DEFAULT PRODUCTION
+  rows | while IFS=$'\t' read -r n g d p _; do printf "%-36s %-14s %-10s %s\n" "$n" "$g" "$d" "$p"; done
+  exit 0
+fi
+
+want=" $* "
+mkdir -p "$root/code"
+rows | while IFS=$'\t' read -r name group default prod org; do
+  [[ "$1" == "--all" || "$want" == *" $name "* || "$want" == *" $group "* ]] || continue
+  org="${GIT_ORG:-$org}"
+  dest="$root/code/$name"
+  if [[ -d "$dest/.git" ]]; then
+    echo "== $name: fetch"
+    git -C "$dest" fetch --quiet --prune origin || echo "   fetch failed (access?)"
+  else
+    echo "== $name: clone ($default)"
+    git clone --quiet --branch "$default" "git@$host:$org/$name.git" "$dest" || echo "   clone failed (access? branch?)"
+  fi
+done

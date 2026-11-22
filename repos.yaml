@@ -1,0 +1,19 @@
+# Repos this workspace works on. `bin/clone <group>...` clones them into code/<name>/
+# (gitignored). `default` is the branch to start work from; `production` is the branch
+# that runs in production where it differs. Replace the examples with your own repos.
+
+org: your-github-org          # GitHub organisation or user that owns the repos
+
+repos:
+  - name: mobile-app
+    group: mobile
+    stack: "{{e.g. Swift / Kotlin / Flutter}}"
+    default: main
+  - name: api-gateway
+    group: edge
+    stack: "{{e.g. Node / Spring Cloud Gateway}}"
+    default: main
+  - name: cards-service
+    group: core
+    stack: "{{e.g. Java 21, Spring Boot 3}}"
+    default: main

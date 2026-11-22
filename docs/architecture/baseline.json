@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "about": "The system before the loop: layers, and components that are not repos in repos.yaml (external systems, data stores), with any other ids specs used for them (aliases). Repos come from repos.yaml. tools/impact.py json merges every spec's outputs/impact.json over this.",
+  "layers": [
+    { "id": "mobile", "name": "Mobile apps" },
+    { "id": "edge", "name": "Edge and gateways" },
+    { "id": "core", "name": "Core services" },
+    { "id": "integrations", "name": "Integration services" },
+    { "id": "external", "name": "External systems" },
+    { "id": "data", "name": "Data stores" },
+    { "id": "platform", "name": "Platform and delivery" }
+  ],
+  "components": [],
+  "flows": []
+}

@@ -1,0 +1,15 @@
+# repos cloned by bin/clone (each is its own git repo)
+code/*/
+# local values, never committed
+local-env/.env
+local-env/.env.*
+!local-env/.env.example
+.claude/settings.local.json
+.claude/state/
+# test and tool output
+tests/**/node_modules/
+tests/**/test-results/
+tests/**/playwright-report/
+specs/*/test-data/
+.DS_Store
+__pycache__/

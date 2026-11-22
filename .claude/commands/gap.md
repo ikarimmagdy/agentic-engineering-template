@@ -13,7 +13,8 @@ Areas: `scope`, `architecture`, `infra`, `apis`, `data`, `localization`, `ui-ux`
 4. Copy the summary into intent.md "What already exists" and the `Existing` column of spec.md.
 5. List every repo it touched in `status.json` → `repos`.
 6. For each area asked, review the code against the checklist below and write `outputs/review/<area>.md`: what was read (repo, branch, commit), what was found, evidence `repo:path:line`. Always write `outputs/review/scope.md` with the repos, branches and commits read.
-7. Append every finding to `outputs/findings.json` (create it if missing) as one row:
+7. **Architecture:** add an "Architecture" section to `outputs/gap-analysis.md` with the styles and patterns the existing code already uses and its architecture problems (skills `architecture-patterns`, `data-architecture`).
+8. Append every finding to `outputs/findings.json` (create it if missing) as one row:
    `{"id", "title", "layer", "category", "dimension", "area", "severity", "scope", "kind", "location", "detail", "impact", "fix", "status", "source"}`
    - `area`: the area being reviewed; `layer`: the app, service or repo the finding is in (e.g. ios, android, web, api, a service name);
    - `severity`: critical | high | medium | low; `dimension`: security | functional | reliability | performance | maintainability | release;
@@ -21,7 +22,7 @@ Areas: `scope`, `architecture`, `infra`, `apis`, `data`, `localization`, `ui-ux`
    - `status`: open; `source`: the review file path; `title` ≤ 90 characters. Update `generated` and `sources`.
    Ids stay stable: never renumber an existing finding.
 Then classify the new rows: `python3 tools/findings.py classify <KEY>` (type, component, team).
-8. Commit: `<KEY>: gap analysis` or `<KEY>: review <area>`.
+9. Commit: `<KEY>: gap analysis` or `<KEY>: review <area>`.
 
 ## Area checklists
 
@@ -35,10 +36,10 @@ Then classify the new rows: `python3 tools/findings.py classify <KEY>` (type, co
 - Arabic-Indic digits: input converted before validation and API calls; display consistent.
 - Currency and VAT formatting per locale; dates and plural rules.
 - PRD and Figma copy against the strings actually shipped.
-- Lokalise (or the TMS in use): keys present in the app but missing in the TMS, and the reverse.
+- The translation management system in use: keys present in the app but missing in the TMS, and the reverse.
 
 **architecture**: components and their responsibilities, call paths per PRD step, where each business rule lives (client vs server), duplicated logic across platforms, coupling to legacy.
-**infra**: where each service runs (OKD, Rancher, other), deploy files and pipelines in the repo, configuration and secrets handling, environments, health checks.
+**infra**: where each service runs (Kubernetes cluster, VMs, serverless, other), deploy files and pipelines in the repo, configuration and secrets handling, environments, health checks.
 **apis**: endpoints the feature uses, authentication and authorisation per endpoint, idempotency, error mapping, versioning, contracts against callers.
 **data**: tables and migrations, personal data stored and where, retention, caches on device or server.
 **ui-ux**: every PRD and Figma step against the screens, states (loading, empty, error), back navigation, accessibility, error messages per PRD outcome.
