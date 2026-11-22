@@ -4,6 +4,8 @@
 # Never listed (they belong to the workspace): CLAUDE.md, HANDOFF.md, README.md, .gitignore,
 # .claude/git-identity, .claude/settings.local.json, constitution/, docs/, specs/<KEY>-*/, inputs/,
 # outputs/, planning/, local-env/, code/, repos.yaml.
+# hub/ is not listed: template-update.sh updates a workspace hub's engine with hub/tools/hub-update.sh and never
+# touches hub/content/. Refresh the template's hub/ from engineer-hub-template with that same script.
 # Bump VERSION on every template change; the next update uses it to find the version a workspace has.
 .claude/agents/
 .claude/commands/

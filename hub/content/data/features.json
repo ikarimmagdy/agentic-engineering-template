@@ -1,0 +1,24 @@
+[
+ {
+  "id": "sample",
+  "title": "Sample feature",
+  "party": "core",
+  "status": "built",
+  "milestone": "Live",
+  "summary": "A sample dossier. Copy this pattern for each real feature.",
+  "services": [
+   "example-api"
+  ],
+  "deps": [],
+  "mockup": "content/mockups/sample.html",
+  "gaps": [],
+  "fid": "PRJ-001",
+  "lifecycle": "backlog",
+  "version": "V1",
+  "type": "feature",
+  "repos": [
+   "example-api:sample"
+  ],
+  "dependsOn": []
+ }
+]

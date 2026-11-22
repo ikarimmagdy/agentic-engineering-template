@@ -17,6 +17,8 @@
 #   edited here since the recorded version three-way merged; kept as it is on conflict
 #   edited here, no recorded version       kept and listed for review
 #   missing here                           added in "full" mode only
+# hub/: when the workspace has hub/content/brand.json, its engine files are updated from the
+# template's hub/ with hub-update.sh (content/ is never touched); --adopt adds a starter hub/.
 # Files the workspace added itself are never touched or removed. Never commits.
 #
 # Modes, recorded in .template-version with the version, template commit and date:
@@ -132,6 +134,16 @@ EOF
 echo "==> $n_upd updated, $n_merge merged, $n_add added, $n_same already current, $n_local local edits on files the template has not changed, $n_kept kept with local edits$( [ "$n_skip" -gt 0 ] && echo ", $n_skip template files not used here (mode existing)")"
 if [ -n "$KEPT" ]; then
   echo "    compare a kept file with:  diff <workspace>/<file> <template>/<file>"
+fi
+# the hub: the template's hub/ carries the engine; a workspace's hub/ keeps its content/, only the engine moves
+if [ -f "$SRC/hub/tools/engine-files.txt" ]; then
+  if [ -f "$WS/hub/content/brand.json" ]; then
+    HUB_TEMPLATE_DIR="$SRC/hub" bash "$SRC/hub/tools/hub-update.sh" $([ "$DRY" = 1 ] && echo --dry-run) "$WS/hub" 2>&1 \
+      | grep -E '^==> hub|^  (add|update|retire)|rror' | sed 's/^/  hub: /' || true
+  elif [ "$ADOPT" = 1 ]; then
+    echo "  add      hub/ (starter hub: fill hub/content/brand.json, then cd hub && node build.mjs)"
+    [ "$DRY" = 1 ] || { cp -R "$SRC/hub" "$WS/hub"; rm -rf "$WS/hub/content/kb-src" "$WS/hub/content/learning-src" "$WS/hub/content/manifest.json"; }
+  fi
 fi
 if [ "$DRY" = 1 ]; then echo "==> dry run: nothing changed"; exit 0; fi
 echo "$VER $SHA $(date +%Y-%m-%d) $MODE" > "$STAMP"

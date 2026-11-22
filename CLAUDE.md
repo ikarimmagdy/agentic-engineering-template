@@ -33,6 +33,7 @@ recorded here in the same turn.
 | `tools/hub_check.py`, `/hub-review` | Check work items against the rules the Engineering Hub relies on (phase diagrams, diagram kinds, version indexes, no laptop paths, sectioned documents, architecture choices) and bring existing ones in line. |
 | `usage/agent-runs/` | Agent-run counts people chose to share (per day, agent and count only), written by the hub's `tools/share_usage.py --push`; the hub's Home adds them up. Created on first share. |
 | `.claude/` | Agents, commands, hooks, path-scoped rules and skills for this project. |
+| `hub/` | This workspace's Engineering Hub: `hub/content/` is its data (brand, roadmap, dossiers), the rest is the hub engine kept current by `tools/template-update.sh`. Build with `cd hub && node build.mjs`. |
 | `.template-version`, `tools/template-update.sh` | The template version this workspace carries and the command that brings later template changes in (`tools/template-files.txt` lists what the template owns). |
 | `examples/` | Worked example of the loop (data add-on), one file per step. Reference only. |
 

@@ -1,0 +1,10 @@
+# Retired engine files: hub-update.sh deletes these from a hub when they are present.
+# 5.0.0: the v4 front-end (one page, hub.js + loop.js) is replaced by the v5 app in index.html + assets/app/.
+assets/js/hub.js
+assets/js/loop.js
+assets/js/comments.js
+assets/css/hub.css
+web/
+# 5.0.1: the comments widget went with v4; its AWS backend and config were never wired to the v5 app.
+backend/comments/
+content/comments-config.json

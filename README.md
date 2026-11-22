@@ -40,7 +40,9 @@ Only the paths in `tools/template-files.txt` belong to the template. A file stil
 version shipped it is replaced; a file you edited is three-way merged against the version recorded in
 `.template-version`, or kept and listed when that is not possible. Files you added are never touched, and
 `CLAUDE.md`, `constitution/`, `docs/`, specs and everything else that is yours are never read. Commit the result.
-Template maintainers bump `VERSION` with every change.
+The workspace's Engineering Hub lives in `hub/` and comes with the template: `--adopt` adds a starter hub, and every
+update moves its engine (from the template's `hub/`, itself built from `engineer-hub-template`) while `hub/content/`,
+the hub's own data, stays as it is. Template maintainers bump `VERSION` with every change.
 
 ## Where the code is
 
