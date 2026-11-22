@@ -33,6 +33,26 @@
             "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/spec-gate.py\""
           }
         ]
+      },
+      {
+        "matcher": "Task|Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/agent-log.py\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Task|Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/agent-log.py\""
+          }
+        ]
       }
     ]
   }
